@@ -8,6 +8,8 @@ function AddTodo({ mutate, data }) {
 	const [formValues, setFormValues] = useState({
 		title: "",
 		body: "",
+		category: "",
+		// deadline: "",
 	});
 
 	const handleChange = (e) => {
@@ -18,7 +20,7 @@ function AddTodo({ mutate, data }) {
 	};
 
 	const createTodo = async () => {
-		const updated = await fetch(`${ENDPOINT}/api/todos`, {
+		const newTodo = await fetch(`${ENDPOINT}/api/todos`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -26,16 +28,17 @@ function AddTodo({ mutate, data }) {
 			body: JSON.stringify(formValues),
 		}).then((r) => r.json());
 
-		mutate(...data, updated);
+		mutate([...data, newTodo], false);
 
 		setFormValues({
 			title: "",
 			body: "",
+			category: "",
+			// deadline: "",
 		});
 
 		setOpen(false);
 	};
-
 
 	return (
 		<>
@@ -61,6 +64,20 @@ function AddTodo({ mutate, data }) {
 								/>
 							</div>
 							<div className="mb-4">
+								<label htmlFor="category" className="block text-sm font-medium text-gray-700">
+									Category
+								</label>
+								<input
+									id="category"
+									name="category"
+									type="text"
+									value={formValues.category}
+									onChange={handleChange}
+									placeholder="Enter category"
+									className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+								/>
+							</div>
+							<div className="mb-4">
 								<label htmlFor="body" className="block text-sm font-medium text-gray-700">
 									Body
 								</label>
@@ -75,6 +92,7 @@ function AddTodo({ mutate, data }) {
 									className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
 								/>
 							</div>
+
 							<div className="flex justify-end">
 								<button
 									type="button"
