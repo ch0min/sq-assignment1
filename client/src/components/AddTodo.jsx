@@ -63,20 +63,7 @@ function AddTodo({ mutate, data }) {
 									className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
 								/>
 							</div>
-							<div className="mb-4">
-								<label htmlFor="category" className="block text-sm font-medium text-gray-700">
-									Category
-								</label>
-								<input
-									id="category"
-									name="category"
-									type="text"
-									value={formValues.category}
-									onChange={handleChange}
-									placeholder="Enter category"
-									className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-								/>
-							</div>
+
 							<div className="mb-4">
 								<label htmlFor="body" className="block text-sm font-medium text-gray-700">
 									Body
@@ -90,6 +77,20 @@ function AddTodo({ mutate, data }) {
 									placeholder="Tell me more..."
 									required
 									className="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+								/>
+							</div>
+							<div className="mb-4">
+								<label htmlFor="category" className="block text-sm font-medium text-gray-700">
+									Category
+								</label>
+								<input
+									id="category"
+									name="category"
+									type="text"
+									value={formValues.category}
+									onChange={handleChange}
+									placeholder="Enter category"
+									className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
 								/>
 							</div>
 
