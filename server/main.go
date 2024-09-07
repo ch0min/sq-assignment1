@@ -19,7 +19,7 @@ type Todo struct {
 	Body  string `json:"body"`
 	Done  bool   `json:"done"`
 	Category    *string `json:"category"`
-	Deadline    *string `json:"deadline"`
+	Deadline    *time.Time `json:"deadline"`
 }
 
 func getAllTodos(db *sql.DB) ([]Todo, error) {
@@ -96,9 +96,10 @@ func main() {
 		if err != nil {
 			return c.Status(500).SendString("Failed to retrieve todos")
 		}
-	
+
+
 		todos := []Todo{}
-	
+
 		rows, err := db.Query("SELECT id, title, text, isCompleted, category, deadline FROM todo")
 		if err != nil {
 			log.Fatal(err)
@@ -113,7 +114,7 @@ func main() {
 			err := rows.Scan(&todo.ID, &todo.Title, &todo.Body, &todo.Done, &category, &deadline)
 			if err != nil {
 				log.Fatal(err)
-			}
+			} 
 	
 			// Handle nullable fields (category and deadline)
 			if category.Valid {
@@ -122,10 +123,8 @@ func main() {
 				todo.Category = nil
 			}
 	
-			// Convert deadline to a string in the format "YYYY-MM-DD"
 			if deadline.Valid {
-				formattedDeadline := deadline.Time.Format("2006-01-02")
-				todo.Deadline = &formattedDeadline
+				todo.Deadline = &deadline.Time
 			} else {
 				todo.Deadline = nil
 			}
@@ -133,38 +132,27 @@ func main() {
 			todos = append(todos, todo)
 		}
 	
-		return c.JSON(todos)
+		return c.JSON(todos)	
 	})
 
 
-	app.Post("/api/todos", func(c *fiber.Ctx) error {
+	app.Post("api/todos", func(c *fiber.Ctx) error {
 		todo := new(Todo)
-	
-		// Parse the request body into the todo struct
+
+
 		if err := c.BodyParser(todo); err != nil {
 			return c.Status(fiber.StatusBadRequest).SendString("Invalid request body")
 		}
-	
-		// Convert the deadline string to time.Time, if provided
-		var deadline *time.Time
-		if todo.Deadline != nil && *todo.Deadline != "" {
-			// Convert the deadline from string to time.Time
-			parsedDeadline, err := time.Parse("2006-01-02", *todo.Deadline)
-			if err != nil {
-				return c.Status(fiber.StatusBadRequest).SendString("Invalid deadline format, expected YYYY-MM-DD")
-			}
-			deadline = &parsedDeadline
-		}
-	
+
 		// Insert the todo into the database
 		var lastInsertId int
 		query := `INSERT INTO todo (title, text, iscompleted, category, deadline) 
 				  VALUES ($1, $2, $3, $4, $5) RETURNING id`
-		err := db.QueryRow(query, todo.Title, todo.Body, todo.Done, todo.Category, deadline).Scan(&lastInsertId)
+		err := db.QueryRow(query, todo.Title, todo.Body, todo.Done, todo.Category, todo.Deadline).Scan(&lastInsertId)
 		if err != nil {
 			return c.Status(500).SendString("Failed to create todo")
 		}
-	
+
 		// Return the newly created todo
 		todo.ID = lastInsertId
 		return c.Status(201).JSON(todo)
@@ -181,19 +169,8 @@ func main() {
 			return c.Status(400).SendString("Invalid request body")
 		}
 	
-		// Convert the deadline string to time.Time, if provided
-		var deadline *time.Time
-		if todo.Deadline != nil && *todo.Deadline != "" {
-			// Convert the deadline from string to time.Time
-			parsedDeadline, err := time.Parse("2006-01-02", *todo.Deadline)
-			if err != nil {
-				return c.Status(fiber.StatusBadRequest).SendString("Invalid deadline format, expected YYYY-MM-DD")
-			}
-			deadline = &parsedDeadline
-		}
-	
 		query := `UPDATE todo SET title=$1, text=$2, iscompleted=$3, category=$4, deadline=$5 WHERE id=$6`
-		_, err = db.Exec(query, todo.Title, todo.Body, todo.Done, todo.Category, deadline, id)
+		_, err = db.Exec(query, todo.Title, todo.Body, todo.Done, todo.Category, todo.Deadline, id)
 		if err != nil {
 			return c.Status(500).SendString("Failed to update task")
 		}
