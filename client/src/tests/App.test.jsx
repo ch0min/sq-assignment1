@@ -1,4 +1,3 @@
-// App.test.js
 import { fireEvent, render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import App from "../App";
@@ -15,7 +14,7 @@ vi.mock("swr", () => ({
 	}),
 }));
 
-// Mock the global fetch function to prevent real API calls
+// // Mock the global fetch function to prevent real API calls
 global.fetch = vi.fn(() =>
 	Promise.resolve({
 		json: () => Promise.resolve({}),
