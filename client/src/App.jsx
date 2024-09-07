@@ -11,11 +11,25 @@ function App() {
 	const { data, mutate } = useSWR("api/todos", fetcher);
 
 	const markTodoDone = async (id) => {
-		const updated = await fetch(`${ENDPOINT}/api/todos/${id}/done`, {
+		const updatedTodos = data.map((todo) => (todo.id === id ? { ...todo, done: !todo.done } : todo));
+
+		mutate(updatedTodos, false);
+
+		await fetch(`${ENDPOINT}/api/todos/${id}/done`, {
 			method: "PATCH",
 		}).then((r) => r.json());
 
-		mutate(updated);
+		mutate();
+	};
+
+	const deleteTodo = async (id) => {
+		await fetch(`${ENDPOINT}/api/todos/${id}`, {
+			method: "DELETE",
+		});
+
+		const updatedTodos = data.filter((todo) => todo.id !== id);
+
+		mutate(updatedTodos, false);
 	};
 
 	return (
@@ -27,16 +41,32 @@ function App() {
 						{data.map((todo) => (
 							<li
 								key={`todo_list__${todo.id}`}
-								className="p-2 bg-white rounded-md shadow-sm hover:bg-gray-50 flex justify-between items-center"
+								className="p-4 bg-white rounded-md shadow-sm hover:bg-gray-50 flex justify-between items-center"
 							>
-								<span>{todo.title}</span>
+								<div className="flex-1 mx-5">
+									<span className="block font-bold">{todo.title}</span>
+									<span className="block text-gray-700 mt-1">{todo.body}</span>
+								</div>
+
+								<div className="mr-3">
+									<button
+										onClick={() => markTodoDone(todo.id)}
+										className={`${
+											todo.done ? "bg-green-500" : "bg-red-500"
+										} text-white rounded-full p-1 hover:${
+											todo.done ? "bg-green-500" : "bg-red-500"
+										} focus:outline-none`}
+									>
+										{todo.done ? "✓" : "✗"}
+									</button>
+								</div>
+
+								{/* Delete button */}
 								<button
-									onClick={() => markTodoDone(todo.id)}
-									className={`${todo.done ? "bg-green-500" : "bg-red-500"} text-white rounded-full p-2 hover:${
-										todo.done ? "bg-green-600" : "bg-red-600"
-									} focus:outline-none`}
+									onClick={() => deleteTodo(todo.id)}
+									className="bg-red-500 text-white rounded-full p-1 hover:bg-red-500 focus:outline-none"
 								>
-									{todo.done ? "✓" : "✗"}
+									🗑️
 								</button>
 							</li>
 						))}
@@ -47,7 +77,7 @@ function App() {
 			</div>
 
 			{/* AddTodo component */}
-			<AddTodo mutate={mutate} />
+			<AddTodo mutate={mutate} data={data} />
 		</>
 	);
 }

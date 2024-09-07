@@ -3,7 +3,7 @@ import { ENDPOINT } from "../App";
 // import { useForm } from "@mantine/hooks";
 // import { Modal, Group, Button } from "@mantine/core";
 
-function AddTodo(mutate) {
+function AddTodo({ mutate, data }) {
 	const [open, setOpen] = useState(false);
 	const [formValues, setFormValues] = useState({
 		title: "",
@@ -17,17 +17,17 @@ function AddTodo(mutate) {
 		});
 	};
 
-
-	const createTodo = async (values) => {
+	const createTodo = async () => {
 		const updated = await fetch(`${ENDPOINT}/api/todos`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(values),
+			body: JSON.stringify(formValues),
 		}).then((r) => r.json());
 
-		mutate(updated);
+		mutate(...data, updated);
+
 		setFormValues({
 			title: "",
 			body: "",
@@ -100,19 +100,6 @@ function AddTodo(mutate) {
 			</div>
 		</>
 	);
-
-	// return (
-	// 	<>
-	// 		<Modal opened={open} onClose={() => setOpen(False)} title="Create todo">
-	// 			text
-	// 		</Modal>
-	// 		<Group position="center">
-	// 			<Button fullWidth md={12} onClick={() => setOpen(true)}>
-	// 				ADD TODO
-	// 			</Button>
-	// 		</Group>
-	// 	</>
-	// );
 }
 
 export default AddTodo;
