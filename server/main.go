@@ -5,7 +5,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/swagger"
 	"github.com/oTuff/sq-ola1/db"
+	_ "github.com/oTuff/sq-ola1/docs"
 	"github.com/oTuff/sq-ola1/routes"
 )
 
@@ -22,6 +24,8 @@ func main() {
 		AllowOrigins: "http://localhost:5173",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
+
+	app.Get("/swagger/*", swagger.HandlerDefault) // default
 
 	// Setup routes
 	routes.SetupTodoRoutes(app, database)

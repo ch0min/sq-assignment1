@@ -8,6 +8,13 @@ import (
 	"github.com/oTuff/sq-ola1/models"
 )
 
+// GetAllTodos godoc
+// @Summary Get all todos
+// @Description Get a list of all todos
+// @Tags todos
+// @Produce json
+// @Success 200 {array} models.Todo
+// @Router /api/todos [get]
 func GetAllTodos(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		todos := []models.Todo{}
@@ -43,6 +50,15 @@ func GetAllTodos(db *sql.DB) fiber.Handler {
 	}
 }
 
+// CreateTodo godoc
+// @Summary Create a new todo
+// @Description Create a new todo item and store it in the database
+// @Tags todos
+// @Accept json
+// @Produce json
+// @Param todo body models.Todo true "Todo"
+// @Success 201 {object} models.Todo
+// @Router /api/todos [post]
 func CreateTodo(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		todo := new(models.Todo)
@@ -63,6 +79,16 @@ func CreateTodo(db *sql.DB) fiber.Handler {
 	}
 }
 
+// UpdateTodo godoc
+// @Summary Update a todo item
+// @Description Update the details of an existing todo item
+// @Tags todos
+// @Accept json
+// @Produce json
+// @Param id path int true "Todo ID"
+// @Param todo body models.Todo true "Todo"
+// @Success 200 {object} models.Todo
+// @Router /api/todos/{id} [patch]
 func UpdateTodo(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id, err := c.ParamsInt("id")
@@ -85,6 +111,14 @@ func UpdateTodo(db *sql.DB) fiber.Handler {
 	}
 }
 
+// ToggleTodoStatus godoc
+// @Summary Toggle todo completion status
+// @Description Toggle the "done" status of a specific todo item
+// @Tags todos
+// @Produce json
+// @Param id path int true "Todo ID"
+// @Success 204 "No Content"
+// @Router /api/todos/{id}/done [patch]
 func ToggleTodoStatus(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id, err := c.ParamsInt("id")
@@ -108,6 +142,14 @@ func ToggleTodoStatus(db *sql.DB) fiber.Handler {
 	}
 }
 
+// DeleteTodo godoc
+// @Summary Delete a todo item
+// @Description Delete a specific todo item by ID
+// @Tags todos
+// @Produce json
+// @Param id path int true "Todo ID"
+// @Success 204 "No Content"
+// @Router /api/todos/{id} [delete]
 func DeleteTodo(db *sql.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id, err := c.ParamsInt("id")
