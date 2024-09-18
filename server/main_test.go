@@ -14,77 +14,36 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/gofiber/fiber/v2"
-
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 )
 
-// func startServer() *fiber.App {
-// 	connStr := "host=localhost port=5432 user=postgres password=test dbname=todo sslmode=disable"
+func TestAppStartup(t *testing.T) {
+	app, db, err := setupAppAndDB()
+	assert.NoError(t, err)
+	defer db.Close()
 
-// 	db, err := setupDatabase(connStr)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	defer db.Close()
-
-// 	fmt.Println("Successfully connected to the database!")
-
-// 	app := setupApp(db)
-
-// 	go func() {
-// 		if err := app.Listen(":4000"); err != nil {
-// 			log.Fatal(err)
-// 		}
-// 	}()
-
-// 	return app
-// }
-
-func setupAppWithTestDB() (*fiber.App, *sql.DB, error) {
-	// Use the same connection string as in `main.go`
-	connStr := "host=localhost port=5432 user=postgres password=test dbname=todo sslmode=disable"
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = db.Ping()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Setup Fiber app with the same routes
-	app := fiber.New()
-	app.Get("/api/todos", func(c *fiber.Ctx) error {
-		todos, err := getAllTodos(db)
-		if err != nil {
-			log.Fatal(err)
-			return c.Status(500).SendString("Failed to retrieve todos")
-		}
-
-		return c.JSON(todos)
-	})
-
-	app.Post("/api/todos", func(c *fiber.Ctx) error {
-		todo := new(Todo)
-		if err := c.BodyParser(todo); err != nil {
-			return c.Status(fiber.StatusBadRequest).SendString("Invalid request body")
-		}
-
-		lastInsertId, err := createTodo(db, todo)
-		if err != nil {
-			return c.Status(500).SendString("Failed to create todo")
-		}
-
-		todo.ID = lastInsertId
-		return c.Status(201).JSON(todo)
-	})
-
-	return app, db, nil
+	// Perform a simple request to see if the app starts correctly
+	req := httptest.NewRequest(http.MethodGet, "/api/todos", nil)
+	resp, err := app.Test(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected the app to start and respond with 200")
 }
 
+func TestSetupAppAndDB_Success(t *testing.T) {
+	// Call setupAppAndDB
+	app, db, err := setupAppAndDB()
+
+	// Ensure no errors are returned
+	assert.NoError(t, err)
+	assert.NotNil(t, app)
+	assert.NotNil(t, db)
+
+	// Cleanup: Close the database connection if necessary
+	if db != nil {
+		db.Close()
+	}
+}
 
 func TestGetTodo(t *testing.T) {
 	db, mock, err := sqlmock.New()
@@ -181,7 +140,7 @@ func TestToggleTodoStatus(t *testing.T) {
 	}
 }
 
-func TestUpdateTodo(t *testing.T)  {
+func TestUpdateTodo(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -225,8 +184,8 @@ func TestDeleteTodo(t *testing.T) {
 	todoID := 1
 
 	mock.ExpectExec("DELETE FROM todo WHERE id=\\$1").
-	WithArgs(todoID).
-	WillReturnResult(sqlmock.NewResult(1, 1))
+		WithArgs(todoID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	err = deleteTodo(db, todoID)
 	if err != nil {
@@ -239,15 +198,12 @@ func TestDeleteTodo(t *testing.T) {
 	}
 }
 
-
-
-
 // Integration Tests
-
 
 func TestGetAllTodosIntegration(t *testing.T) {
 	// Setup the Fiber app and the test database
-	app, db, err := setupAppWithTestDB()
+	app, db, err := setupAppAndDB()
+	// setupAppWithTestDB()
 	if err != nil {
 		log.Fatalf("Failed to connect to test database: %v", err)
 	}
@@ -268,7 +224,8 @@ func TestGetAllTodosIntegration(t *testing.T) {
 }
 func TestCreateTodoIntegration(t *testing.T) {
 	// Setup the Fiber app and the test database
-	app, db, err := setupAppWithTestDB()
+	app, db, err := setupAppAndDB()
+	// setupAppWithTestDB()
 	if err != nil {
 		log.Fatalf("Failed to connect to test database: %v", err)
 	}
@@ -319,6 +276,19 @@ func TestCreateTodoIntegration(t *testing.T) {
 	assert.True(t, exists, "Todo should have been inserted into the database")
 }
 
+func TestMainFunction(t *testing.T) {
+	// Run the main function in a separate goroutine to avoid blocking
+	go func() {
+		main()
+	}()
 
+	// Give the server a second to start
+	time.Sleep(1 * time.Second)
+
+	// Make a request to ensure the server started
+	resp, err := http.Get("http://localhost:4000/api/todos")
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
 
 /* REMEMBER TO DO CLEAN UP NEXT TIME */

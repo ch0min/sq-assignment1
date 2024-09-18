@@ -106,8 +106,6 @@ func updateTodo(db *sql.DB, id int, todo *Todo) error {
 	return err
 }
 
-
-
 func toggleTodoStatus(db *sql.DB, id int) error {
 	// Retrieve the current status of the task
 	var currentStatus bool
@@ -129,24 +127,19 @@ func deleteTodo(db *sql.DB, id int) error {
 	return err
 }
 
-
-func main() {
-	// Setup db connection
+func setupAppAndDB() (*fiber.App, *sql.DB, error) {
 	connStr := "host=localhost port=5432 user=postgres password=test dbname=todo sslmode=disable"
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
-	defer db.Close()
 
 	err = db.Ping()
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
-	fmt.Println("Successfully connected to the database!")
 
-	// App
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "http://localhost:5173",
@@ -243,6 +236,16 @@ func main() {
 
 		return c.SendStatus(fiber.StatusNoContent)
 	})
+
+	return app, db, nil
+}
+
+func main() {
+	app, db, err := setupAppAndDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
 
 	log.Fatal(app.Listen(":4000"))
 }
