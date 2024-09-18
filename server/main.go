@@ -106,6 +106,8 @@ func updateTodo(db *sql.DB, id int, todo *Todo) error {
 	return err
 }
 
+
+
 func toggleTodoStatus(db *sql.DB, id int) error {
 	// Retrieve the current status of the task
 	var currentStatus bool
@@ -123,9 +125,10 @@ func toggleTodoStatus(db *sql.DB, id int) error {
 }
 
 func deleteTodo(db *sql.DB, id int) error {
-	_, err := db.Exec("DELETE FROM todo WHERE id = $1", id)
+	_, err := db.Exec("DELETE FROM todo WHERE id=$1", id)
 	return err
 }
+
 
 func main() {
 	// Setup db connection

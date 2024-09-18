@@ -1,0 +1,348 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>sq-ola1: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/oTuff/sq-ola1/main.go (36.5%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "database/sql"
+        "fmt"
+        "log"
+        "time"
+
+        "github.com/gofiber/fiber/v2"
+        "github.com/gofiber/fiber/v2/middleware/cors"
+
+        _ "github.com/lib/pq"
+)
+
+type Todo struct {
+        ID       int        `json:"id"`
+        Title    string     `json:"title"`
+        Body     string     `json:"body"`
+        Done     bool       `json:"done"`
+        Category *string    `json:"category"`
+        Deadline *time.Time `json:"deadline"`
+}
+
+func getTodo(db *sql.DB, id int) (Todo, error) <span class="cov8" title="1">{
+        todo := Todo{}
+
+        row := db.QueryRow("SELECT id, title, text, isCompleted, category, deadline FROM todo WHERE id = $1", id)
+
+        var category sql.NullString
+        var deadline sql.NullTime
+
+        err := row.Scan(&amp;todo.ID, &amp;todo.Title, &amp;todo.Body, &amp;todo.Done, &amp;category, &amp;deadline)
+        if err != nil </span><span class="cov8" title="1">{
+                // If no row is found, handle the error
+                if err == sql.ErrNoRows </span><span class="cov0" title="0">{
+                        return todo, fmt.Errorf("no todo found with id %d", id)
+                }</span>
+                <span class="cov8" title="1">return todo, err</span>
+        }
+
+        // Handle nullable fields
+        <span class="cov8" title="1">if category.Valid </span><span class="cov0" title="0">{
+                todo.Category = &amp;category.String
+        }</span> else<span class="cov8" title="1"> {
+                todo.Category = nil
+        }</span>
+
+        <span class="cov8" title="1">if deadline.Valid </span><span class="cov0" title="0">{
+                todo.Deadline = &amp;deadline.Time
+        }</span> else<span class="cov8" title="1"> {
+                todo.Deadline = nil
+        }</span>
+
+        <span class="cov8" title="1">return todo, nil</span>
+}
+
+func getAllTodos(db *sql.DB) ([]Todo, error) <span class="cov8" title="1">{
+        todos := []Todo{}
+
+        rows, err := db.Query("SELECT id, title, text, isCompleted, category, deadline FROM todo")
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer rows.Close()
+
+        for rows.Next() </span><span class="cov8" title="1">{
+                var todo Todo
+                var category sql.NullString
+                var deadline sql.NullTime
+
+                err := rows.Scan(&amp;todo.ID, &amp;todo.Title, &amp;todo.Body, &amp;todo.Done, &amp;category, &amp;deadline)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+
+                // Handle nullable fields (category and deadline)
+                <span class="cov8" title="1">if category.Valid </span><span class="cov8" title="1">{
+                        todo.Category = &amp;category.String
+                }</span> else<span class="cov8" title="1"> {
+                        todo.Category = nil
+                }</span>
+
+                <span class="cov8" title="1">if deadline.Valid </span><span class="cov8" title="1">{
+                        todo.Deadline = &amp;deadline.Time
+                }</span> else<span class="cov8" title="1"> {
+                        todo.Deadline = nil
+                }</span>
+
+                <span class="cov8" title="1">todos = append(todos, todo)</span>
+        }
+
+        <span class="cov8" title="1">return todos, nil</span>
+}
+
+func createTodo(db *sql.DB, todo *Todo) (int, error) <span class="cov8" title="1">{
+        var lastInsertId int
+        query := `INSERT INTO todo (title, text, iscompleted, category, deadline)
+                          VALUES ($1, $2, $3, $4, $5) RETURNING id`
+        err := db.QueryRow(query, todo.Title, todo.Body, todo.Done, todo.Category, todo.Deadline).Scan(&amp;lastInsertId)
+        return lastInsertId, err
+}</span>
+
+func updateTodo(db *sql.DB, id int, todo *Todo) error <span class="cov0" title="0">{
+        query := `UPDATE todo SET title=$1, text=$2, iscompleted=$3, category=$4, deadline=$5 WHERE id=$6`
+        _, err := db.Exec(query, todo.Title, todo.Body, todo.Done, todo.Category, todo.Deadline, id)
+        return err
+}</span>
+
+func toggleTodoStatus(db *sql.DB, id int) error <span class="cov8" title="1">{
+        // Retrieve the current status of the task
+        var currentStatus bool
+        err := db.QueryRow("SELECT iscompleted FROM todo WHERE id=$1", id).Scan(&amp;currentStatus)
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+
+        // Toggle the status
+        <span class="cov8" title="1">newStatus := !currentStatus
+
+        // Update the status in the database
+        _, err = db.Exec("UPDATE todo SET iscompleted=$1 WHERE id=$2", newStatus, id)
+        return err</span>
+}
+
+func deleteTodo(db *sql.DB, id int) error <span class="cov0" title="0">{
+        _, err := db.Exec("DELETE FROM todo WHERE id = $1", id)
+        return err
+}</span>
+
+func main() <span class="cov0" title="0">{
+        // Setup db connection
+        connStr := "host=localhost port=5432 user=postgres password=test dbname=todo sslmode=disable"
+
+        db, err := sql.Open("postgres", connStr)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+        <span class="cov0" title="0">defer db.Close()
+
+        err = db.Ping()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+        <span class="cov0" title="0">fmt.Println("Successfully connected to the database!")
+
+        // App
+        app := fiber.New()
+        app.Use(cors.New(cors.Config{
+                AllowOrigins: "http://localhost:5173",
+                AllowHeaders: "Origin, Content-Type, Accept",
+        }))
+
+        app.Get("/api/todos/:id", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+                id, err := c.ParamsInt("id")
+                if err != nil </span><span class="cov0" title="0">{
+                        return c.Status(400).SendString("Invalid ID")
+                }</span>
+
+                <span class="cov0" title="0">todo := Todo{}
+                todo, err = getTodo(db, id)
+                if err != nil </span><span class="cov0" title="0">{
+                        return c.Status(400).SendString("no todo with that id")
+                }</span>
+
+                <span class="cov0" title="0">return c.Status(200).JSON(todo)</span>
+        })
+
+        <span class="cov0" title="0">app.Get("/api/todos", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+                todos, err := getAllTodos(db)
+                if err != nil </span><span class="cov0" title="0">{
+                        log.Fatal(err)
+                        return c.Status(500).SendString("Failed to retrieve todos")
+                }</span>
+
+                <span class="cov0" title="0">return c.JSON(todos)</span>
+        })
+
+        <span class="cov0" title="0">app.Post("/api/todos", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+                todo := new(Todo)
+
+                if err := c.BodyParser(todo); err != nil </span><span class="cov0" title="0">{
+                        return c.Status(fiber.StatusBadRequest).SendString("Invalid request body")
+                }</span>
+
+                // Insert the todo into the database
+                <span class="cov0" title="0">lastInsertId, err := createTodo(db, todo)
+                if err != nil </span><span class="cov0" title="0">{
+                        return c.Status(500).SendString("Failed to create todo")
+                }</span>
+
+                // Return the newly created todo
+                <span class="cov0" title="0">todo.ID = lastInsertId
+                return c.Status(201).JSON(todo)</span>
+        })
+
+        <span class="cov0" title="0">app.Patch("/api/todos/:id", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+                id, err := c.ParamsInt("id")
+                if err != nil </span><span class="cov0" title="0">{
+                        return c.Status(400).SendString("Invalid ID")
+                }</span>
+
+                <span class="cov0" title="0">todo := new(Todo)
+                if err := c.BodyParser(todo); err != nil </span><span class="cov0" title="0">{
+                        return c.Status(400).SendString("Invalid request body")
+                }</span>
+
+                <span class="cov0" title="0">err = updateTodo(db, id, todo)
+                if err != nil </span><span class="cov0" title="0">{
+                        return c.Status(500).SendString("Failed to update task")
+                }</span>
+
+                <span class="cov0" title="0">return c.Status(200).JSON(todo)</span>
+        })
+
+        <span class="cov0" title="0">app.Patch("/api/todos/:id/done", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+                id, err := c.ParamsInt("id")
+                if err != nil </span><span class="cov0" title="0">{
+                        return c.Status(400).SendString("Invalid ID")
+                }</span>
+
+                <span class="cov0" title="0">err = toggleTodoStatus(db, id)
+                if err != nil </span><span class="cov0" title="0">{
+                        return c.Status(500).SendString("Failed to update task status")
+                }</span>
+
+                <span class="cov0" title="0">return c.SendStatus(fiber.StatusNoContent)</span>
+        })
+
+        <span class="cov0" title="0">app.Delete("/api/todos/:id", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+                id, err := c.ParamsInt("id")
+
+                if err != nil </span><span class="cov0" title="0">{
+                        return c.Status(fiber.StatusBadRequest).SendString("Invalid todo ID")
+                }</span>
+
+                <span class="cov0" title="0">err = deleteTodo(db, id)
+                if err != nil </span><span class="cov0" title="0">{
+                        return c.Status(500).SendString("Failed to delete todo")
+                }</span>
+
+                <span class="cov0" title="0">return c.SendStatus(fiber.StatusNoContent)</span>
+        })
+
+        <span class="cov0" title="0">log.Fatal(app.Listen(":4000"))</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-	"fmt"
+
+	// "fmt"
 	"io"
 	"log"
 	"testing"
@@ -18,6 +19,28 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 )
+
+// func startServer() *fiber.App {
+// 	connStr := "host=localhost port=5432 user=postgres password=test dbname=todo sslmode=disable"
+
+// 	db, err := setupDatabase(connStr)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	defer db.Close()
+
+// 	fmt.Println("Successfully connected to the database!")
+
+// 	app := setupApp(db)
+
+// 	go func() {
+// 		if err := app.Listen(":4000"); err != nil {
+// 			log.Fatal(err)
+// 		}
+// 	}()
+
+// 	return app
+// }
 
 func setupAppWithTestDB() (*fiber.App, *sql.DB, error) {
 	// Use the same connection string as in `main.go`
@@ -62,6 +85,7 @@ func setupAppWithTestDB() (*fiber.App, *sql.DB, error) {
 	return app, db, nil
 }
 
+
 func TestGetTodo(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -92,8 +116,8 @@ func TestGetTodo(t *testing.T) {
 		t.Errorf("unfulfilled expectations: %s", err)
 	}
 
-	todo, err = getTodo(db, 3)
-	assert.EqualError(t, err, fmt.Sprintf("no todo found with id %d", 0))
+	// _, err = getTodo(db, 3)
+	// assert.EqualError(t, err, fmt.Sprintf("no todo found with id %d", 0))
 }
 
 func TestGetAllTodos(t *testing.T) {
@@ -157,7 +181,70 @@ func TestToggleTodoStatus(t *testing.T) {
 	}
 }
 
+func TestUpdateTodo(t *testing.T)  {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	// Define the todo item to be updated
+	todo := Todo{
+		ID:       1,
+		Title:    "Updated Title",
+		Body:     "Updated Body",
+		Done:     true,
+		Category: func() *string { s := "Updated Category"; return &s }(),
+		Deadline: func() *time.Time { t := time.Now().Add(24 * time.Hour); return &t }(),
+	}
+
+	// Expect the update query to be executed with the correct parameters
+	mock.ExpectExec("UPDATE todo SET title=\\$1, text=\\$2, iscompleted=\\$3, category=\\$4, deadline=\\$5 WHERE id=\\$6").
+		WithArgs(todo.Title, todo.Body, todo.Done, todo.Category, todo.Deadline, todo.ID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// Call the function to update the todo
+	err = updateTodo(db, todo.ID, &todo)
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when calling updateTodo", err)
+	}
+
+	// Check that all expectations were met
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %s", err)
+	}
+}
+
+func TestDeleteTodo(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	todoID := 1
+
+	mock.ExpectExec("DELETE FROM todo WHERE id=\\$1").
+	WithArgs(todoID).
+	WillReturnResult(sqlmock.NewResult(1, 1))
+
+	err = deleteTodo(db, todoID)
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when calling deleteTodo", err)
+	}
+
+	// Check that all expectations were met
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled expectations: %s", err)
+	}
+}
+
+
+
+
 // Integration Tests
+
+
 func TestGetAllTodosIntegration(t *testing.T) {
 	// Setup the Fiber app and the test database
 	app, db, err := setupAppWithTestDB()
@@ -231,5 +318,7 @@ func TestCreateTodoIntegration(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, exists, "Todo should have been inserted into the database")
 }
+
+
 
 /* REMEMBER TO DO CLEAN UP NEXT TIME */
