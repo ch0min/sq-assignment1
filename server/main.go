@@ -21,6 +21,39 @@ type Todo struct {
 	Deadline *time.Time `json:"deadline"`
 }
 
+func getTodo(db *sql.DB, id int) (Todo, error) {
+	todo := Todo{}
+
+	row := db.QueryRow("SELECT id, title, text, isCompleted, category, deadline FROM todo WHERE id = $1", id)
+
+	var category sql.NullString
+	var deadline sql.NullTime
+
+	err := row.Scan(&todo.ID, &todo.Title, &todo.Body, &todo.Done, &category, &deadline)
+	if err != nil {
+		// If no row is found, handle the error
+		if err == sql.ErrNoRows {
+			return todo, fmt.Errorf("no todo found with id %d", id)
+		}
+		return todo, err
+	}
+
+	// Handle nullable fields
+	if category.Valid {
+		todo.Category = &category.String
+	} else {
+		todo.Category = nil
+	}
+
+	if deadline.Valid {
+		todo.Deadline = &deadline.Time
+	} else {
+		todo.Deadline = nil
+	}
+
+	return todo, nil
+}
+
 func getAllTodos(db *sql.DB) ([]Todo, error) {
 	todos := []Todo{}
 
@@ -117,6 +150,21 @@ func main() {
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 
+	app.Get("/api/todos/:id", func(c *fiber.Ctx) error {
+		id, err := c.ParamsInt("id")
+		if err != nil {
+			return c.Status(400).SendString("Invalid ID")
+		}
+
+		todo := Todo{}
+		todo, err = getTodo(db, id)
+		if err != nil {
+			return c.Status(400).SendString("no todo with that id")
+		}
+
+		return c.Status(200).JSON(todo)
+	})
+
 	app.Get("/api/todos", func(c *fiber.Ctx) error {
 		todos, err := getAllTodos(db)
 		if err != nil {
@@ -195,4 +243,3 @@ func main() {
 
 	log.Fatal(app.Listen(":4000"))
 }
-
