@@ -8,7 +8,7 @@ This document provides the results and analysis of the load testing performed on
 
 - **Tool Used:** k6
 - **Test Script Location:** `./loadtests/loadtest.js`
-- **Execution Date:** [Date of Test Execution]
+- **Execution Date:** 18-09-2024
 
 ## Test Configuration
 
@@ -52,16 +52,4 @@ This document provides the results and analysis of the load testing performed on
 - The maximum response time of 433.48ms indicates that while most requests are processed quickly, there were occasional delays.
 - The throughput of 37.24 requests per second was consistent, showing stable performance under the simulated load.
 
-## Recommendations
-
-- **Further Testing:** Consider performing additional load testing with higher numbers of concurrent users to fully understand the performance limits of the API.
-- **Optimization:** Review and optimize the API performance if consistently lower response times are required, especially under high load conditions.
-
-## Next Steps
-
-- **Review Results:** Analyze the detailed metrics for potential bottlenecks or areas of improvement.
-- **Documentation:** Update any relevant performance documentation based on the findings.
-
 ---
-
-For more detailed visualizations, consider integrating k6 with Grafana or using k6 Cloud for comprehensive reporting.
