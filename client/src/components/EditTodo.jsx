@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ENDPOINT } from "../App";
 
-function EditTodo({ todo, onSave, mutate }) {
+function EditTodo({ todo, onSave, onCancel }) {
 	const [formValues, setFormValues] = useState({
 		title: todo.title,
 		body: todo.body,

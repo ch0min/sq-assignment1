@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("test", async ({ page }) => {
+test("running an end-to-end test", async ({ page }) => {
 	await page.goto("http://localhost:5173/");
 
 	// Open the 'Add Todo' form
@@ -25,3 +25,7 @@ test("test", async ({ page }) => {
 });
 
 /* REMEMBER TO DO CLEAN UP NEXT TIME */
+afterEach(() => {
+	// cleanup logic for any todos created during tests
+	global.fetch.mockClear(); // Clears any mocks
+});

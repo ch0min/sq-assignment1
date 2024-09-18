@@ -75,7 +75,7 @@ function App() {
 										</div>
 
 										<button
-											onClick={() => setEditingTodoId(todo.id)}
+											onClick={() => setEditTodo(todo.id)}
 											className="mr-3 bg-yellow-500 text-white rounded-full p-1 hover:bg-yellow-600 focus:outline-none"
 										>
 											✎
