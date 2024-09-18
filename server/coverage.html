@@ -55,7 +55,7 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/oTuff/sq-ola1/main.go (36.5%)</option>
+				<option value="file0">github.com/oTuff/sq-ola1/main.go (80.5%)</option>
 				
 				</select>
 			</div>
@@ -101,12 +101,12 @@ func getTodo(db *sql.DB, id int) (Todo, error) <span class="cov8" title="1">{
         var deadline sql.NullTime
 
         err := row.Scan(&amp;todo.ID, &amp;todo.Title, &amp;todo.Body, &amp;todo.Done, &amp;category, &amp;deadline)
-        if err != nil </span><span class="cov8" title="1">{
+        if err != nil </span><span class="cov0" title="0">{
                 // If no row is found, handle the error
                 if err == sql.ErrNoRows </span><span class="cov0" title="0">{
                         return todo, fmt.Errorf("no todo found with id %d", id)
                 }</span>
-                <span class="cov8" title="1">return todo, err</span>
+                <span class="cov0" title="0">return todo, err</span>
         }
 
         // Handle nullable fields
@@ -171,7 +171,7 @@ func createTodo(db *sql.DB, todo *Todo) (int, error) <span class="cov8" title="1
         return lastInsertId, err
 }</span>
 
-func updateTodo(db *sql.DB, id int, todo *Todo) error <span class="cov0" title="0">{
+func updateTodo(db *sql.DB, id int, todo *Todo) error <span class="cov8" title="1">{
         query := `UPDATE todo SET title=$1, text=$2, iscompleted=$3, category=$4, deadline=$5 WHERE id=$6`
         _, err := db.Exec(query, todo.Title, todo.Body, todo.Done, todo.Category, todo.Deadline, id)
         return err
@@ -193,60 +193,56 @@ func toggleTodoStatus(db *sql.DB, id int) error <span class="cov8" title="1">{
         return err</span>
 }
 
-func deleteTodo(db *sql.DB, id int) error <span class="cov0" title="0">{
-        _, err := db.Exec("DELETE FROM todo WHERE id = $1", id)
+func deleteTodo(db *sql.DB, id int) error <span class="cov8" title="1">{
+        _, err := db.Exec("DELETE FROM todo WHERE id=$1", id)
         return err
 }</span>
 
-func main() <span class="cov0" title="0">{
-        // Setup db connection
+func setupAppAndDB() (*fiber.App, *sql.DB, error) <span class="cov8" title="1">{
         connStr := "host=localhost port=5432 user=postgres password=test dbname=todo sslmode=disable"
 
         db, err := sql.Open("postgres", connStr)
         if err != nil </span><span class="cov0" title="0">{
-                log.Fatal(err)
+                return nil, nil, err
         }</span>
-        <span class="cov0" title="0">defer db.Close()
 
-        err = db.Ping()
+        <span class="cov8" title="1">err = db.Ping()
         if err != nil </span><span class="cov0" title="0">{
-                log.Fatal(err)
+                return nil, nil, err
         }</span>
-        <span class="cov0" title="0">fmt.Println("Successfully connected to the database!")
 
-        // App
-        app := fiber.New()
+        <span class="cov8" title="1">app := fiber.New()
         app.Use(cors.New(cors.Config{
                 AllowOrigins: "http://localhost:5173",
                 AllowHeaders: "Origin, Content-Type, Accept",
         }))
 
-        app.Get("/api/todos/:id", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+        app.Get("/api/todos/:id", func(c *fiber.Ctx) error </span><span class="cov8" title="1">{
                 id, err := c.ParamsInt("id")
                 if err != nil </span><span class="cov0" title="0">{
                         return c.Status(400).SendString("Invalid ID")
                 }</span>
 
-                <span class="cov0" title="0">todo := Todo{}
+                <span class="cov8" title="1">todo := Todo{}
                 todo, err = getTodo(db, id)
                 if err != nil </span><span class="cov0" title="0">{
                         return c.Status(400).SendString("no todo with that id")
                 }</span>
 
-                <span class="cov0" title="0">return c.Status(200).JSON(todo)</span>
+                <span class="cov8" title="1">return c.Status(200).JSON(todo)</span>
         })
 
-        <span class="cov0" title="0">app.Get("/api/todos", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">app.Get("/api/todos", func(c *fiber.Ctx) error </span><span class="cov8" title="1">{
                 todos, err := getAllTodos(db)
                 if err != nil </span><span class="cov0" title="0">{
                         log.Fatal(err)
                         return c.Status(500).SendString("Failed to retrieve todos")
                 }</span>
 
-                <span class="cov0" title="0">return c.JSON(todos)</span>
+                <span class="cov8" title="1">return c.JSON(todos)</span>
         })
 
-        <span class="cov0" title="0">app.Post("/api/todos", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">app.Post("/api/todos", func(c *fiber.Ctx) error </span><span class="cov8" title="1">{
                 todo := new(Todo)
 
                 if err := c.BodyParser(todo); err != nil </span><span class="cov0" title="0">{
@@ -254,65 +250,75 @@ func main() <span class="cov0" title="0">{
                 }</span>
 
                 // Insert the todo into the database
-                <span class="cov0" title="0">lastInsertId, err := createTodo(db, todo)
+                <span class="cov8" title="1">lastInsertId, err := createTodo(db, todo)
                 if err != nil </span><span class="cov0" title="0">{
                         return c.Status(500).SendString("Failed to create todo")
                 }</span>
 
                 // Return the newly created todo
-                <span class="cov0" title="0">todo.ID = lastInsertId
+                <span class="cov8" title="1">todo.ID = lastInsertId
                 return c.Status(201).JSON(todo)</span>
         })
 
-        <span class="cov0" title="0">app.Patch("/api/todos/:id", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">app.Patch("/api/todos/:id", func(c *fiber.Ctx) error </span><span class="cov8" title="1">{
                 id, err := c.ParamsInt("id")
                 if err != nil </span><span class="cov0" title="0">{
                         return c.Status(400).SendString("Invalid ID")
                 }</span>
 
-                <span class="cov0" title="0">todo := new(Todo)
+                <span class="cov8" title="1">todo := new(Todo)
                 if err := c.BodyParser(todo); err != nil </span><span class="cov0" title="0">{
                         return c.Status(400).SendString("Invalid request body")
                 }</span>
 
-                <span class="cov0" title="0">err = updateTodo(db, id, todo)
+                <span class="cov8" title="1">err = updateTodo(db, id, todo)
                 if err != nil </span><span class="cov0" title="0">{
                         return c.Status(500).SendString("Failed to update task")
                 }</span>
 
-                <span class="cov0" title="0">return c.Status(200).JSON(todo)</span>
+                <span class="cov8" title="1">return c.Status(200).JSON(todo)</span>
         })
 
-        <span class="cov0" title="0">app.Patch("/api/todos/:id/done", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">app.Patch("/api/todos/:id/done", func(c *fiber.Ctx) error </span><span class="cov8" title="1">{
                 id, err := c.ParamsInt("id")
                 if err != nil </span><span class="cov0" title="0">{
                         return c.Status(400).SendString("Invalid ID")
                 }</span>
 
-                <span class="cov0" title="0">err = toggleTodoStatus(db, id)
+                <span class="cov8" title="1">err = toggleTodoStatus(db, id)
                 if err != nil </span><span class="cov0" title="0">{
                         return c.Status(500).SendString("Failed to update task status")
                 }</span>
 
-                <span class="cov0" title="0">return c.SendStatus(fiber.StatusNoContent)</span>
+                <span class="cov8" title="1">return c.SendStatus(fiber.StatusNoContent)</span>
         })
 
-        <span class="cov0" title="0">app.Delete("/api/todos/:id", func(c *fiber.Ctx) error </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">app.Delete("/api/todos/:id", func(c *fiber.Ctx) error </span><span class="cov8" title="1">{
                 id, err := c.ParamsInt("id")
 
                 if err != nil </span><span class="cov0" title="0">{
                         return c.Status(fiber.StatusBadRequest).SendString("Invalid todo ID")
                 }</span>
 
-                <span class="cov0" title="0">err = deleteTodo(db, id)
+                <span class="cov8" title="1">err = deleteTodo(db, id)
                 if err != nil </span><span class="cov0" title="0">{
                         return c.Status(500).SendString("Failed to delete todo")
                 }</span>
 
-                <span class="cov0" title="0">return c.SendStatus(fiber.StatusNoContent)</span>
+                <span class="cov8" title="1">return c.SendStatus(fiber.StatusNoContent)</span>
         })
 
-        <span class="cov0" title="0">log.Fatal(app.Listen(":4000"))</span>
+        <span class="cov8" title="1">return app, db, nil</span>
+}
+
+func main() <span class="cov8" title="1">{
+        app, db, err := setupAppAndDB()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatal(err)
+        }</span>
+        <span class="cov8" title="1">defer db.Close()
+
+        log.Fatal(app.Listen(":4000"))</span>
 }
 </pre>
 		

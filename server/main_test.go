@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 
-	// "fmt"
+	"fmt"
 	"io"
 	"log"
 	"testing"
@@ -23,7 +23,6 @@ func TestAppStartup(t *testing.T) {
 	assert.NoError(t, err)
 	defer db.Close()
 
-	// Perform a simple request to see if the app starts correctly
 	req := httptest.NewRequest(http.MethodGet, "/api/todos", nil)
 	resp, err := app.Test(req)
 	assert.NoError(t, err)
@@ -31,15 +30,12 @@ func TestAppStartup(t *testing.T) {
 }
 
 func TestSetupAppAndDB_Success(t *testing.T) {
-	// Call setupAppAndDB
 	app, db, err := setupAppAndDB()
 
-	// Ensure no errors are returned
 	assert.NoError(t, err)
 	assert.NotNil(t, app)
 	assert.NotNil(t, db)
 
-	// Cleanup: Close the database connection if necessary
 	if db != nil {
 		db.Close()
 	}
@@ -74,9 +70,6 @@ func TestGetTodo(t *testing.T) {
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %s", err)
 	}
-
-	// _, err = getTodo(db, 3)
-	// assert.EqualError(t, err, fmt.Sprintf("no todo found with id %d", 0))
 }
 
 func TestGetAllTodos(t *testing.T) {
@@ -162,13 +155,11 @@ func TestUpdateTodo(t *testing.T) {
 		WithArgs(todo.Title, todo.Body, todo.Done, todo.Category, todo.Deadline, todo.ID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
-	// Call the function to update the todo
 	err = updateTodo(db, todo.ID, &todo)
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when calling updateTodo", err)
 	}
 
-	// Check that all expectations were met
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %s", err)
 	}
@@ -192,7 +183,6 @@ func TestDeleteTodo(t *testing.T) {
 		t.Fatalf("an error '%s' was not expected when calling deleteTodo", err)
 	}
 
-	// Check that all expectations were met
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %s", err)
 	}
@@ -203,7 +193,6 @@ func TestDeleteTodo(t *testing.T) {
 func TestGetAllTodosIntegration(t *testing.T) {
 	// Setup the Fiber app and the test database
 	app, db, err := setupAppAndDB()
-	// setupAppWithTestDB()
 	if err != nil {
 		log.Fatalf("Failed to connect to test database: %v", err)
 	}
@@ -222,10 +211,10 @@ func TestGetAllTodosIntegration(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 }
+
 func TestCreateTodoIntegration(t *testing.T) {
 	// Setup the Fiber app and the test database
 	app, db, err := setupAppAndDB()
-	// setupAppWithTestDB()
 	if err != nil {
 		log.Fatalf("Failed to connect to test database: %v", err)
 	}
@@ -276,8 +265,240 @@ func TestCreateTodoIntegration(t *testing.T) {
 	assert.True(t, exists, "Todo should have been inserted into the database")
 }
 
+func TestGetTodoIntegration(t *testing.T) {
+	// Setup the Fiber app and the test database
+	app, db, err := setupAppAndDB()
+	if err != nil {
+		log.Fatalf("Failed to connect to test database: %v", err)
+	}
+	defer db.Close()
+
+	// Define the new todo to be created
+	newTodo := Todo{
+		Title: "Test Todo",
+		Body:  "This is a test todo",
+		Done:  false,
+	}
+
+	// Insert the todo into the database
+	_, err = db.Exec("INSERT INTO todo (title, text, iscompleted) VALUES ($1, $2, $3)", newTodo.Title, newTodo.Body, newTodo.Done)
+	assert.NoError(t, err)
+
+	// Retrieve ID
+	row := db.QueryRow("SELECT id FROM todo WHERE title = $1 AND text = $2", newTodo.Title, newTodo.Body)
+	var todoID int
+	err = row.Scan(&todoID)
+	assert.NoError(t, err)
+
+	// Create a test HTTP request
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/todos/%d", todoID), nil)
+
+	resp, err := app.Test(req, -1) // -1 disables the timeout
+	assert.NoError(t, err)
+
+	respBody, _ := io.ReadAll(resp.Body)
+	t.Logf("Response Status Code: %d", resp.StatusCode)
+	t.Logf("Response Body: %s", string(respBody))
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected a 200 OK status code")
+
+	var todo Todo
+	err = json.NewDecoder(bytes.NewReader(respBody)).Decode(&todo)
+	assert.NoError(t, err)
+
+	assert.Equal(t, newTodo.Title, todo.Title)
+	assert.Equal(t, newTodo.Body, todo.Body)
+}
+
+func TestUpdateTodoIntegration(t *testing.T) {
+	// Setup the Fiber app and the test database
+	app, db, err := setupAppAndDB()
+	if err != nil {
+		log.Fatalf("Failed to connect to test database: %v", err)
+	}
+	defer db.Close()
+
+	initialTodo := Todo{
+		Title:    "Initial Title",
+		Body:     "Initial Body",
+		Done:     false,
+		Category: func() *string { s := "Initial Category"; return &s }(),
+	}
+
+	initialTodoJSON, err := json.Marshal(initialTodo)
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/todos", bytes.NewBuffer(initialTodoJSON))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, -1)
+	assert.NoError(t, err)
+
+	respBody, _ := io.ReadAll(resp.Body)
+	t.Logf("Response Status Code: %d", resp.StatusCode)
+	t.Logf("Response Body: %s", string(respBody))
+
+	assert.Equal(t, http.StatusCreated, resp.StatusCode, "Expected a 201 Created status code")
+
+	var createdTodo Todo
+	err = json.NewDecoder(bytes.NewReader(respBody)).Decode(&createdTodo)
+	assert.NoError(t, err)
+	createdTodoID := createdTodo.ID
+
+	updatedTodo := Todo{
+		Title:    "Updated Title",
+		Body:     "Updated Body",
+		Done:     true,
+		Category: func() *string { s := "Updated Category"; return &s }(),
+	}
+
+	updatedTodoJSON, err := json.Marshal(updatedTodo)
+	assert.NoError(t, err)
+
+	req = httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/todos/%d", createdTodoID), bytes.NewBuffer(updatedTodoJSON))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err = app.Test(req, -1)
+	assert.NoError(t, err)
+
+	respBody, _ = io.ReadAll(resp.Body)
+	t.Logf("Response Status Code: %d", resp.StatusCode)
+	t.Logf("Response Body: %s", string(respBody))
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected a 200 OK status code")
+
+	var todo Todo
+	err = db.QueryRow("SELECT title, text, iscompleted, category FROM todo WHERE id=$1", createdTodoID).Scan(&todo.Title, &todo.Body, &todo.Done, &todo.Category)
+
+	if err != nil {
+		t.Errorf("Failed to query todo from database: %v", err)
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, updatedTodo.Title, todo.Title)
+	assert.Equal(t, updatedTodo.Body, todo.Body)
+	assert.Equal(t, updatedTodo.Done, todo.Done)
+	assert.Equal(t, *updatedTodo.Category, *todo.Category)
+}
+
+func TestToggleTodoStatusIntegration(t *testing.T) {
+	// Setup the Fiber app and the test database
+	app, db, err := setupAppAndDB()
+	if err != nil {
+		log.Fatalf("Failed to connect to test database: %v", err)
+	}
+	defer db.Close()
+
+	initialTodo := Todo{
+		Title:    "Toggle Test Title",
+		Body:     "Toggle Test Body",
+		Done:     false,
+		Category: func() *string { s := "Toggle Test Category"; return &s }(),
+	}
+
+	initialTodoJSON, err := json.Marshal(initialTodo)
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/todos", bytes.NewBuffer(initialTodoJSON))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, -1)
+	assert.NoError(t, err)
+
+	respBody, _ := io.ReadAll(resp.Body)
+	t.Logf("Response Status Code: %d", resp.StatusCode)
+	t.Logf("Response Body: %s", string(respBody))
+
+	assert.Equal(t, http.StatusCreated, resp.StatusCode, "Expected a 201 Created status code")
+
+	var createdTodo Todo
+	err = json.NewDecoder(bytes.NewReader(respBody)).Decode(&createdTodo)
+	assert.NoError(t, err)
+	createdTodoID := createdTodo.ID
+
+	req = httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/todos/%d/done", createdTodoID), nil)
+	resp, err = app.Test(req, -1)
+	assert.NoError(t, err)
+
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected a 204 No Content status code")
+
+	var todo struct {
+		IsCompleted bool `db:"iscompleted"`
+	}
+	err = db.QueryRow("SELECT iscompleted FROM todo WHERE id=$1", createdTodoID).Scan(&todo.IsCompleted)
+
+	if err != nil {
+		t.Errorf("Failed to query todo from database: %v", err)
+	}
+
+	assert.NoError(t, err)
+	// The initial value of IsCompleted was false, so after toggling it should be true
+	assert.True(t, todo.IsCompleted, "Todo status should be toggled to true")
+
+	// Toggle again to test reverting
+	req = httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/todos/%d/done", createdTodoID), nil)
+	resp, err = app.Test(req, -1)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected a 204 No Content status code")
+
+	err = db.QueryRow("SELECT iscompleted FROM todo WHERE id=$1", createdTodoID).Scan(&todo.IsCompleted)
+	assert.NoError(t, err)
+	// After toggling again, it should revert to false
+	assert.False(t, todo.IsCompleted, "Todo status should be toggled back to false")
+}
+
+func TestDeleteTodoIntegration(t *testing.T) {
+	// Setup the Fiber app and the test database
+	app, db, err := setupAppAndDB()
+	if err != nil {
+		log.Fatalf("Failed to connect to test database: %v", err)
+	}
+	defer db.Close()
+
+	initialTodo := Todo{
+		Title:    "Delete Test Title",
+		Body:     "Delete Test Body",
+		Done:     false,
+		Category: func() *string { s := "Delete Test Category"; return &s }(),
+	}
+
+	initialTodoJSON, err := json.Marshal(initialTodo)
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/todos", bytes.NewBuffer(initialTodoJSON))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, -1)
+	assert.NoError(t, err)
+
+	respBody, _ := io.ReadAll(resp.Body)
+	t.Logf("Response Status Code: %d", resp.StatusCode)
+	t.Logf("Response Body: %s", string(respBody))
+
+	assert.Equal(t, http.StatusCreated, resp.StatusCode, "Expected a 201 Created status code")
+
+	var createdTodo Todo
+	err = json.NewDecoder(bytes.NewReader(respBody)).Decode(&createdTodo)
+	assert.NoError(t, err)
+	createdTodoID := createdTodo.ID
+
+	req = httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/todos/%d", createdTodoID), nil)
+	resp, err = app.Test(req, -1)
+	assert.NoError(t, err)
+
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode, "Expected a 204 No Content status code")
+
+	var exists bool
+	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM todo WHERE id=$1)", createdTodoID).Scan(&exists)
+	if err != nil {
+		t.Errorf("Failed to query todo existence from database: %v", err)
+	}
+
+	assert.NoError(t, err)
+	assert.False(t, exists, "Todo should have been deleted from the database")
+}
+
 func TestMainFunction(t *testing.T) {
-	// Run the main function in a separate goroutine to avoid blocking
 	go func() {
 		main()
 	}()
@@ -291,4 +512,4 @@ func TestMainFunction(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
-/* REMEMBER TO DO CLEAN UP NEXT TIME */
+// /* REMEMBER TO DO CLEAN UP NEXT TIME */
