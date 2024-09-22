@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	// "errors"
 
 	"fmt"
 	"io"
@@ -39,6 +40,43 @@ func TestSetupAppAndDB_Success(t *testing.T) {
 	if db != nil {
 		db.Close()
 	}
+}
+
+// Validation Business Logic
+// func validateTodoInput(todo *Todo) error {
+//     if todo.Title == "" {
+//         return errors.New("task title must not be empty")
+//     }
+//     if len(todo.Body) < 10 {
+//         return errors.New("task description must have at least 10 characters")
+//     }
+//     return nil
+// }
+
+func TestValidateTodoInput(t *testing.T) {
+    // Case 1: Title is empty
+    todo := &Todo{
+        Title: "",
+        Body:  "This is a valid description",
+    }
+    err := validateTodoInput(todo)
+    assert.EqualError(t, err, "task title must not be empty", "Expected an error for empty title")
+
+    // Case 2: Description is too short
+    todo = &Todo{
+        Title: "Valid Title",
+        Body:  "Short",
+    }
+    err = validateTodoInput(todo)
+    assert.EqualError(t, err, "task description must have at least 10 characters", "Expected an error for short description")
+
+    // Case 3: Both title and description are valid
+    todo = &Todo{
+        Title: "Valid Title",
+        Body:  "This is a valid description",
+    }
+    err = validateTodoInput(todo)
+    assert.NoError(t, err, "Expected no error for valid title and description")
 }
 
 func TestGetTodo(t *testing.T) {

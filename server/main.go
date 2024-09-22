@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -19,6 +20,17 @@ type Todo struct {
 	Done     bool       `json:"done"`
 	Category *string    `json:"category"`
 	Deadline *time.Time `json:"deadline"`
+}
+
+// Validating Business Logic
+func validateTodoInput(todo *Todo) error {
+    if todo.Title == "" {
+        return errors.New("task title must not be empty")
+    }
+    if len(todo.Body) < 10 {
+        return errors.New("task description must have at least 10 characters")
+    }
+    return nil
 }
 
 func getTodo(db *sql.DB, id int) (Todo, error) {
@@ -178,6 +190,12 @@ func setupAppAndDB() (*fiber.App, *sql.DB, error) {
 			return c.Status(fiber.StatusBadRequest).SendString("Invalid request body")
 		}
 
+			// Validate the todo before inserting it into the database
+			if err := validateTodoInput(todo); err != nil {
+				return c.Status(fiber.StatusBadRequest).SendString(err.Error())
+			}
+
+
 		// Insert the todo into the database
 		lastInsertId, err := createTodo(db, todo)
 		if err != nil {
@@ -195,10 +213,16 @@ func setupAppAndDB() (*fiber.App, *sql.DB, error) {
 			return c.Status(400).SendString("Invalid ID")
 		}
 
+
 		todo := new(Todo)
 		if err := c.BodyParser(todo); err != nil {
 			return c.Status(400).SendString("Invalid request body")
 		}
+
+				// Validate the todo before inserting it into the database
+				if err := validateTodoInput(todo); err != nil {
+					return c.Status(fiber.StatusBadRequest).SendString(err.Error())
+				}
 
 		err = updateTodo(db, id, todo)
 		if err != nil {
@@ -247,5 +271,5 @@ func main() {
 	}
 	defer db.Close()
 
-	log.Fatal(app.Listen(":4000"))
+	log.Fatal(app.Listen("localhost:4000"))
 }
