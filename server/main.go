@@ -164,8 +164,9 @@ func setupAppAndDB() (*fiber.App, *sql.DB, error) {
 			return c.Status(400).SendString("Invalid ID")
 		}
 
-		todo := Todo{}
-		todo, err = getTodo(db, id)
+
+		// todo := Todo{}
+		todo, err := getTodo(db, id) // Fixed by staticcheck - alternative for PMD
 		if err != nil {
 			return c.Status(400).SendString("no todo with that id")
 		}
@@ -190,10 +191,10 @@ func setupAppAndDB() (*fiber.App, *sql.DB, error) {
 			return c.Status(fiber.StatusBadRequest).SendString("Invalid request body")
 		}
 
-			// Validate the todo before inserting it into the database
-			if err := validateTodoInput(todo); err != nil {
-				return c.Status(fiber.StatusBadRequest).SendString(err.Error())
-			}
+		// Validate the todo before inserting it into the database
+		if err := validateTodoInput(todo); err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString(err.Error())
+		}
 
 
 		// Insert the todo into the database
@@ -219,10 +220,10 @@ func setupAppAndDB() (*fiber.App, *sql.DB, error) {
 			return c.Status(400).SendString("Invalid request body")
 		}
 
-				// Validate the todo before inserting it into the database
-				if err := validateTodoInput(todo); err != nil {
-					return c.Status(fiber.StatusBadRequest).SendString(err.Error())
-				}
+			// Validate the todo before inserting it into the database
+			if err := validateTodoInput(todo); err != nil {
+				return c.Status(fiber.StatusBadRequest).SendString(err.Error())
+			}
 
 		err = updateTodo(db, id, todo)
 		if err != nil {
